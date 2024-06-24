@@ -61,23 +61,6 @@ static std::string format(const char * fmt, ...) {
 // tensor name constants
 //
 
-// #define TN_TOKEN_EMBD "%s.token_embd.weight"
-// #define TN_POS_EMBD "%s.position_embd.weight"
-// #define TN_CLASS_EMBD "v.class_embd"
-// #define TN_PATCH_EMBD "v.patch_embd.weight"
-// #define TN_ATTN_K "%s.blk.%d.attn_k.%s"
-// #define TN_ATTN_Q "%s.blk.%d.attn_q.%s"
-// #define TN_ATTN_V "%s.blk.%d.attn_v.%s"
-// #define TN_ATTN_OUTPUT "%s.blk.%d.attn_out.%s"
-// #define TN_FFN_DOWN "%s.blk.%d.ffn_down.%s"
-// #define TN_FFN_UP "%s.blk.%d.ffn_up.%s"
-// #define TN_LN_1 "%s.blk.%d.ln1.%s"
-// #define TN_LN_2 "%s.blk.%d.ln2.%s"
-// #define TN_LN_PRE "%s.pre_ln.%s"
-// #define TN_LN_POST "%s.post_ln.%s"
-// #define TN_TEXT_PROJ "text_projection.weight"
-// #define TN_VIS_PROJ "visual_projection.weight"
-
 #define TN_TOKEN_EMBD "%s.embeddings.token_embedding.weight"
 #define TN_POS_EMBD "%s.embeddings.position_embedding.weight"
 #define TN_CLASS_EMBD "vision_model.embeddings.class_embedding"
@@ -511,8 +494,8 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             printf("t_n_layer          %d\n", hparams.n_layer);
         }
 
-				std::string model_name = "text_model";
-				const char* t = model_name.c_str();
+        std::string model_name = "text_model";
+        const char* t = model_name.c_str();
 
         text_model.token_embeddings = get_tensor(new_clip->ctx, format(TN_TOKEN_EMBD, t));
         text_model.position_embeddings = get_tensor(new_clip->ctx, format(TN_POS_EMBD, t));
@@ -573,8 +556,8 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             printf("v_n_layer          %d\n", hparams.n_layer);
         }
 
-				std::string model_name = "vision_model";
-				const char* v = model_name.c_str();
+        std::string model_name = "vision_model";
+        const char* v = model_name.c_str();
 
         vision_model.patch_embeddings = get_tensor(new_clip->ctx, TN_PATCH_EMBD);
         vision_model.class_embedding = get_tensor(new_clip->ctx, TN_CLASS_EMBD);
