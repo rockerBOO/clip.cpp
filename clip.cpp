@@ -61,20 +61,38 @@ static std::string format(const char * fmt, ...) {
 // tensor name constants
 //
 
-#define TN_TOKEN_EMBD "%s.token_embd.weight"
-#define TN_POS_EMBD "%s.position_embd.weight"
-#define TN_CLASS_EMBD "v.class_embd"
-#define TN_PATCH_EMBD "v.patch_embd.weight"
-#define TN_ATTN_K "%s.blk.%d.attn_k.%s"
-#define TN_ATTN_Q "%s.blk.%d.attn_q.%s"
-#define TN_ATTN_V "%s.blk.%d.attn_v.%s"
-#define TN_ATTN_OUTPUT "%s.blk.%d.attn_out.%s"
-#define TN_FFN_DOWN "%s.blk.%d.ffn_down.%s"
-#define TN_FFN_UP "%s.blk.%d.ffn_up.%s"
-#define TN_LN_1 "%s.blk.%d.ln1.%s"
-#define TN_LN_2 "%s.blk.%d.ln2.%s"
-#define TN_LN_PRE "%s.pre_ln.%s"
-#define TN_LN_POST "%s.post_ln.%s"
+// #define TN_TOKEN_EMBD "%s.token_embd.weight"
+// #define TN_POS_EMBD "%s.position_embd.weight"
+// #define TN_CLASS_EMBD "v.class_embd"
+// #define TN_PATCH_EMBD "v.patch_embd.weight"
+// #define TN_ATTN_K "%s.blk.%d.attn_k.%s"
+// #define TN_ATTN_Q "%s.blk.%d.attn_q.%s"
+// #define TN_ATTN_V "%s.blk.%d.attn_v.%s"
+// #define TN_ATTN_OUTPUT "%s.blk.%d.attn_out.%s"
+// #define TN_FFN_DOWN "%s.blk.%d.ffn_down.%s"
+// #define TN_FFN_UP "%s.blk.%d.ffn_up.%s"
+// #define TN_LN_1 "%s.blk.%d.ln1.%s"
+// #define TN_LN_2 "%s.blk.%d.ln2.%s"
+// #define TN_LN_PRE "%s.pre_ln.%s"
+// #define TN_LN_POST "%s.post_ln.%s"
+// #define TN_TEXT_PROJ "text_projection.weight"
+// #define TN_VIS_PROJ "visual_projection.weight"
+
+#define TN_TOKEN_EMBD "%s.embeddings.token_embedding.weight"
+#define TN_POS_EMBD "%s.embeddings.position_embedding.weight"
+#define TN_CLASS_EMBD "vision_model.embeddings.class_embedding"
+#define TN_PATCH_EMBD "vision_model.embeddings.patch_embedding.weight"
+#define TN_ATTN_K "%s.encoder.layers.%d.self_attn.k_proj.%s"
+#define TN_ATTN_Q "%s.encoder.layers.%d.self_attn.v_proj.%s"
+#define TN_ATTN_V "%s.encoder.layers.%d.self_attn.v_proj.%s"
+#define TN_ATTN_OUTPUT "%s.encoder.layers.%d.self_attn.out_proj.%s"
+#define TN_FFN_DOWN "%s.encoder.layers.%d.mlp.fc1.%s"
+#define TN_FFN_UP "%s.encoder.layers.%d.mlp.fc2.%s"
+#define TN_LN_1 "%s.encoder.layers.%d.layer_norm1.%s"
+#define TN_LN_2 "%s.encoder.layers.%d.layer_norm2.%s"
+#define TN_LN_PRE "%s.pre_layrnorm.%s"
+#define TN_LN_POST "%s.post_layernorm.%s"
+#define TN_LN_FINAL "%s.final_layer_norm.%s"
 #define TN_TEXT_PROJ "text_projection.weight"
 #define TN_VIS_PROJ "visual_projection.weight"
 
@@ -493,30 +511,33 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             printf("t_n_layer          %d\n", hparams.n_layer);
         }
 
-        text_model.token_embeddings = get_tensor(new_clip->ctx, format(TN_TOKEN_EMBD, "t"));
-        text_model.position_embeddings = get_tensor(new_clip->ctx, format(TN_POS_EMBD, "t"));
-        text_model.post_ln_w = get_tensor(new_clip->ctx, format(TN_LN_POST, "t", "weight"));
-        text_model.post_ln_b = get_tensor(new_clip->ctx, format(TN_LN_POST, "t", "bias"));
+				std::string model_name = "text_model";
+				const char* t = model_name.c_str();
+
+        text_model.token_embeddings = get_tensor(new_clip->ctx, format(TN_TOKEN_EMBD, t));
+        text_model.position_embeddings = get_tensor(new_clip->ctx, format(TN_POS_EMBD, t));
+        text_model.post_ln_w = get_tensor(new_clip->ctx, format(TN_LN_FINAL, t, "weight"));
+        text_model.post_ln_b = get_tensor(new_clip->ctx, format(TN_LN_FINAL, t, "bias"));
         text_model.projection = get_tensor(new_clip->ctx, TN_TEXT_PROJ);
         text_model.layers.resize(hparams.n_layer);
         for (int il = 0; il < hparams.n_layer; ++il) {
             auto & layer = text_model.layers[il];
-            layer.k_w = get_tensor(new_clip->ctx, format(TN_ATTN_K, "t", il, "weight"));
-            layer.q_w = get_tensor(new_clip->ctx, format(TN_ATTN_Q, "t", il, "weight"));
-            layer.v_w = get_tensor(new_clip->ctx, format(TN_ATTN_V, "t", il, "weight"));
-            layer.o_w = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, "t", il, "weight"));
-            layer.ln_1_w = get_tensor(new_clip->ctx, format(TN_LN_1, "t", il, "weight"));
-            layer.ln_2_w = get_tensor(new_clip->ctx, format(TN_LN_2, "t", il, "weight"));
-            layer.ff_i_w = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, "t", il, "weight"));
-            layer.ff_o_w = get_tensor(new_clip->ctx, format(TN_FFN_UP, "t", il, "weight"));
-            layer.k_b = get_tensor(new_clip->ctx, format(TN_ATTN_K, "t", il, "bias"));
-            layer.q_b = get_tensor(new_clip->ctx, format(TN_ATTN_Q, "t", il, "bias"));
-            layer.v_b = get_tensor(new_clip->ctx, format(TN_ATTN_V, "t", il, "bias"));
-            layer.o_b = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, "t", il, "bias"));
-            layer.ln_1_b = get_tensor(new_clip->ctx, format(TN_LN_1, "t", il, "bias"));
-            layer.ln_2_b = get_tensor(new_clip->ctx, format(TN_LN_2, "t", il, "bias"));
-            layer.ff_i_b = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, "t", il, "bias"));
-            layer.ff_o_b = get_tensor(new_clip->ctx, format(TN_FFN_UP, "t", il, "bias"));
+            layer.k_w = get_tensor(new_clip->ctx, format(TN_ATTN_K, t, il, "weight"));
+            layer.q_w = get_tensor(new_clip->ctx, format(TN_ATTN_Q, t, il, "weight"));
+            layer.v_w = get_tensor(new_clip->ctx, format(TN_ATTN_V, t, il, "weight"));
+            layer.o_w = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, t, il, "weight"));
+            layer.ln_1_w = get_tensor(new_clip->ctx, format(TN_LN_1, t, il, "weight"));
+            layer.ln_2_w = get_tensor(new_clip->ctx, format(TN_LN_2, t, il, "weight"));
+            layer.ff_i_w = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, t, il, "weight"));
+            layer.ff_o_w = get_tensor(new_clip->ctx, format(TN_FFN_UP, t, il, "weight"));
+            layer.k_b = get_tensor(new_clip->ctx, format(TN_ATTN_K, t, il, "bias"));
+            layer.q_b = get_tensor(new_clip->ctx, format(TN_ATTN_Q, t, il, "bias"));
+            layer.v_b = get_tensor(new_clip->ctx, format(TN_ATTN_V, t, il, "bias"));
+            layer.o_b = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, t, il, "bias"));
+            layer.ln_1_b = get_tensor(new_clip->ctx, format(TN_LN_1, t, il, "bias"));
+            layer.ln_2_b = get_tensor(new_clip->ctx, format(TN_LN_2, t, il, "bias"));
+            layer.ff_i_b = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, t, il, "bias"));
+            layer.ff_o_b = get_tensor(new_clip->ctx, format(TN_FFN_UP, t, il, "bias"));
         }
     }
 
@@ -552,33 +573,36 @@ struct clip_ctx * clip_model_load(const char * fname, const int verbosity = 1) {
             printf("v_n_layer          %d\n", hparams.n_layer);
         }
 
+				std::string model_name = "vision_model";
+				const char* v = model_name.c_str();
+
         vision_model.patch_embeddings = get_tensor(new_clip->ctx, TN_PATCH_EMBD);
         vision_model.class_embedding = get_tensor(new_clip->ctx, TN_CLASS_EMBD);
-        vision_model.position_embeddings = get_tensor(new_clip->ctx, format(TN_POS_EMBD, "v"));
-        vision_model.pre_ln_w = get_tensor(new_clip->ctx, format(TN_LN_PRE, "v", "weight"));
-        vision_model.pre_ln_b = get_tensor(new_clip->ctx, format(TN_LN_PRE, "v", "bias"));
-        vision_model.post_ln_w = get_tensor(new_clip->ctx, format(TN_LN_POST, "v", "weight"));
-        vision_model.post_ln_b = get_tensor(new_clip->ctx, format(TN_LN_POST, "v", "bias"));
+        vision_model.position_embeddings = get_tensor(new_clip->ctx, format(TN_POS_EMBD, v));
+        vision_model.pre_ln_w = get_tensor(new_clip->ctx, format(TN_LN_PRE, v, "weight"));
+        vision_model.pre_ln_b = get_tensor(new_clip->ctx, format(TN_LN_PRE, v, "bias"));
+        vision_model.post_ln_w = get_tensor(new_clip->ctx, format(TN_LN_POST, v, "weight"));
+        vision_model.post_ln_b = get_tensor(new_clip->ctx, format(TN_LN_POST, v, "bias"));
         vision_model.projection = get_tensor(new_clip->ctx, TN_VIS_PROJ);
         vision_model.layers.resize(hparams.n_layer);
         for (int il = 0; il < hparams.n_layer; ++il) {
             auto & layer = vision_model.layers[il];
-            layer.k_w = get_tensor(new_clip->ctx, format(TN_ATTN_K, "v", il, "weight"));
-            layer.q_w = get_tensor(new_clip->ctx, format(TN_ATTN_Q, "v", il, "weight"));
-            layer.v_w = get_tensor(new_clip->ctx, format(TN_ATTN_V, "v", il, "weight"));
-            layer.o_w = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, "v", il, "weight"));
-            layer.ln_1_w = get_tensor(new_clip->ctx, format(TN_LN_1, "v", il, "weight"));
-            layer.ln_2_w = get_tensor(new_clip->ctx, format(TN_LN_2, "v", il, "weight"));
-            layer.ff_i_w = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, "v", il, "weight"));
-            layer.ff_o_w = get_tensor(new_clip->ctx, format(TN_FFN_UP, "v", il, "weight"));
-            layer.k_b = get_tensor(new_clip->ctx, format(TN_ATTN_K, "v", il, "bias"));
-            layer.q_b = get_tensor(new_clip->ctx, format(TN_ATTN_Q, "v", il, "bias"));
-            layer.v_b = get_tensor(new_clip->ctx, format(TN_ATTN_V, "v", il, "bias"));
-            layer.o_b = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, "v", il, "bias"));
-            layer.ln_1_b = get_tensor(new_clip->ctx, format(TN_LN_1, "v", il, "bias"));
-            layer.ln_2_b = get_tensor(new_clip->ctx, format(TN_LN_2, "v", il, "bias"));
-            layer.ff_i_b = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, "v", il, "bias"));
-            layer.ff_o_b = get_tensor(new_clip->ctx, format(TN_FFN_UP, "v", il, "bias"));
+            layer.k_w = get_tensor(new_clip->ctx, format(TN_ATTN_K, v, il, "weight"));
+            layer.q_w = get_tensor(new_clip->ctx, format(TN_ATTN_Q, v, il, "weight"));
+            layer.v_w = get_tensor(new_clip->ctx, format(TN_ATTN_V, v, il, "weight"));
+            layer.o_w = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, v, il, "weight"));
+            layer.ln_1_w = get_tensor(new_clip->ctx, format(TN_LN_1, v, il, "weight"));
+            layer.ln_2_w = get_tensor(new_clip->ctx, format(TN_LN_2, v, il, "weight"));
+            layer.ff_i_w = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, v, il, "weight"));
+            layer.ff_o_w = get_tensor(new_clip->ctx, format(TN_FFN_UP, v, il, "weight"));
+            layer.k_b = get_tensor(new_clip->ctx, format(TN_ATTN_K, v, il, "bias"));
+            layer.q_b = get_tensor(new_clip->ctx, format(TN_ATTN_Q, v, il, "bias"));
+            layer.v_b = get_tensor(new_clip->ctx, format(TN_ATTN_V, v, il, "bias"));
+            layer.o_b = get_tensor(new_clip->ctx, format(TN_ATTN_OUTPUT, v, il, "bias"));
+            layer.ln_1_b = get_tensor(new_clip->ctx, format(TN_LN_1, v, il, "bias"));
+            layer.ln_2_b = get_tensor(new_clip->ctx, format(TN_LN_2, v, il, "bias"));
+            layer.ff_i_b = get_tensor(new_clip->ctx, format(TN_FFN_DOWN, v, il, "bias"));
+            layer.ff_o_b = get_tensor(new_clip->ctx, format(TN_FFN_UP, v, il, "bias"));
         }
     }
 
